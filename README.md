@@ -1,0 +1,2 @@
+# hxinv
+FFXI Inventory Manager.
