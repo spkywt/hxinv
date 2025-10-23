@@ -19,6 +19,7 @@ Ability to Toggle Items to be Droppable<br />
    <li>Fix or Remove Sort button</li>
    <li>Make default color scheme better</li>
    <li>Add settings for users to customize</li>
+   <li>Major code clean-up...</li>
 </ul>
 
 <h1>Completed Work</h1>
