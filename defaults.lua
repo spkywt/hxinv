@@ -14,7 +14,6 @@ local defaults = T{
       showGil              =  true;
       showInv              =  true;
    };
-   unlockedItems           = T{};
    -- Container display order, must add show and filter "variable" entry for each container
    containerOrder          =  {0, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 1, 9, 2, 4, 3};
    windows                 =  {

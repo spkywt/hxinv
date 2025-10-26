@@ -25,8 +25,8 @@
 
 addon.author            =  'Espe (spkywt)';
 addon.name              =  'hxinv';
-addon.desc              =  'FFXI Inventory Manager.';
-addon.version           =  '0.1.0';
+addon.desc              =  'FFXI Inventory Viewer.';
+addon.version           =  '1.0.0';
 
 -- Ashita Libs
 require 'common'
@@ -39,7 +39,6 @@ local d3d8dev           =  d3d.get_device();
 -- Addon Custom Files
 require 'constants'
 require 'helpers'
-require 'packets'
 local item_sort         = require('item_sort')
 
 -- Addon Settings
@@ -50,20 +49,13 @@ local itemTexturesPtr                  =  T{};
 local BMWidth_Gil                      =  0;
 local BMWidth_Storage                  =  0;
 local popupItem                        =  {-1, -1, 0, 0};
-local ZONE_FLAGS_POINTER               =  {};
-local ZONE_FLAGS_OFFSET                =  {};
 local ContainersInverted               =  T{};
-local player                           =  AshitaCore:GetMemoryManager():GetPlayer();
 local inventory                        =  AshitaCore:GetMemoryManager():GetInventory();
 
 
 ----------------------------------------------------------------------------------------------------
 -- Get Textures for Images
 ----------------------------------------------------------------------------------------------------
-local GetItemById = function(itemId)
-    return AshitaCore:GetResourceManager():GetItemById(itemId);
-end
-
 local GetItemTexture = function(item)
    if not itemTextures:containskey(item.Id) then
       local texturePointer = ffi.new('IDirect3DTexture8*[1]');
@@ -97,19 +89,6 @@ local imgGilIcon, texGilIcon = LoadTextureFromFile('65535');
 local imgInvIcon, texInvIcon = LoadTextureFromFile('sack');
 local imgLckIcon, texLckIcon = LoadTextureFromFile('locked');
 local imgDrpIcon, texDrpIcon = LoadTextureFromFile('x');
-
-----------------------------------------------------------------------------------------------------
--- func: isMogHouse
--- desc: Return container names with proper spacing.
-----------------------------------------------------------------------------------------------------
-local function isMogHouse()
-   local zoneflagspointer = ashita.memory.read_uint32(ZONE_FLAGS_POINTER);
-   local zoneflags = ashita.memory.read_uint32(zoneflagspointer + ZONE_FLAGS_OFFSET);
-   if (bit.band(zoneflags, 0x100) == 0x100) then
-      return true;
-   else return false;
-   end
-end
 
 ----------------------------------------------------------------------------------------------------
 -- func: GetContainerName
@@ -305,104 +284,6 @@ local function ShowItemToolTip(item, r, g, b, a)
 end
 
 ----------------------------------------------------------------------------------------------------
--- func: ShowItemMenu
--- desc: Display context menu when right clicking on inventory item.
-----------------------------------------------------------------------------------------------------
-local function ShowItemMenu(cID, item)
-   if (popupItem[1] == cID and popupItem[2] == item.index) then
-      imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, {7, 7});
-      imgui.PushStyleVar(ImGuiStyleVar_ItemSpacing, {7, 7});
-      imgui.PushStyleColor(ImGuiCol_PopupBg, {0.15, 0.15, 0.15, 1});
-      imgui.PushStyleColor(ImGuiCol_Border, {0.25, 0.25, 0.25, 1});
-      imgui.SetNextWindowPos({popupItem[3], popupItem[4]});
-      if (imgui.BeginPopup('ItemMenu')) then
-         local atleastone = false;
-         local wearable = false;
-         if (item.type == 4 or item.type == 5) then wearable = true; end
-         
-         imgui.TextColored({1.0, 1.0, 0.57, 1.0}, item.name);
-         imgui.Separator();
-         if (imgui.BeginMenu('MoveItem', item.flags ~= 5)) then
-            if (ContainerInfo[0].size == ContainerInfo[0].max and cID ~= 0) then
-               imgui.MenuItem('Must have 1 space in inventory.',  nil, false, false);
-            else
-               for i = 1, table.getn(config.containerOrder), 1 do
-                  local cli = config.containerOrder[i];
-                  local notSame = cli ~= cID;
-                  local notTemp = cli ~= 3;
-                  local notFull = ContainerInfo[cli].size < ContainerInfo[cli].max;
-                  local mhCheck = isMogHouse() or (not isMogHouse() and
-                                  cli ~= 1 and cli ~= 9 and cli ~= 2 and cli ~= 4);
-                  local wdCheck = ((item.type == 4 or item.type == 5) and
-                                  (cli >= 8 and cli ~= 9 and cli <= 16)) or
-                                  (cli <= 9 and cli ~= 8);
-                  if (notSame and notTemp and notFull and mhCheck and wdCheck) then
-                     if (imgui.MenuItem(ContainerInfo[cli].name,  nil, false, true)) then
-                        if (cID == 0 or cli == 0) then
-                           moveItem(item.index, item.count, cID, cli);
-                        else
-                           moveItem(item.index, item.count, cID, 0);
-                           local getNewIndex = 0;
-                           for i = 0, ContainerInfo[0].max, 1 do
-                              local gi = inventory:GetContainerItem(0, i);
-                              if (item.id == gi.Id and item.count == gi.Count) then
-                                 getNewIndex = gi.Index;
-                              end
-                           end
-                           moveItem(getNewIndex, item.count, 0, cli);
-                        end
-                     end
-                     atleastone = true;
-                  end
-               end
-               if not atleastone then
-                  imgui.MenuItem('No Valid Options',  nil, false, false)
-               end
-            end
-            imgui.EndMenu();
-         end
-         --[[
-         local tradable = true;
-         if (item.flags == 5) then tradable = false; end
-         --if (bit.bor(item.flags2, ItemFlags.Exclusive) == item.flags2) then tradable = false; end
-         if (imgui.MenuItem('Trade', nil, false, tradable)) then
-            AshitaCore:GetChatManager():QueueCommand(string.format('/item "%s" <t>', item.name), 1); end
-         ]]--
-         if (config.unlockedItems[item.id]) then
-            if (imgui.MenuItem('Disable Drop', nil, false, true)) then
-               config.unlockedItems[item.id] = nil;
-               settings.save();
-            end
-         else
-            if (imgui.MenuItem('Enable Drop', nil, false, item.flags ~= 5)) then
-               config.unlockedItems[item.id] = true;
-               settings.save();
-            end
-         end
-         imgui.EndPopup();
-      else
-         popupItem = {-1, -1};
-      end
-      imgui.PopStyleColor(2);
-      imgui.PopStyleVar();
-      imgui.PopStyleVar();
-   end
-   
-   if imgui.IsWindowHovered(
-           bit.bor(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem,
-                   ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-      and imgui.IsMouseClicked(ImGuiMouseButton_Right) then
-      imgui.SetWindowFocus();
-   end
-   local mhCheck2 = isMogHouse() or (not isMogHouse() and cID ~= 1 and cID ~= 9 and cID ~= 2 and cID ~= 4);
-   if (imgui.IsItemClicked(1) and mhCheck2) then
-      popupItem = {cID, item.index};
-      imgui.OpenPopup('ItemMenu');
-      popupItem[3], popupItem[4] = imgui.GetMousePos();
-   end
-end
-
-----------------------------------------------------------------------------------------------------
 -- func: ContainerButton
 -- desc: Create button for containers.
 ----------------------------------------------------------------------------------------------------
@@ -523,7 +404,7 @@ local function ShowContainer(cID, itemTypes)
                                 ImGuiWindowFlags_AlwaysUseWindowPadding,
                                 ImGuiWindowFlags_AlwaysVerticalScrollbar);
    
-   local pRace = GetPlayerEntity().Race;
+   local player = AshitaCore:GetMemoryManager():GetPlayer();
    local myItemTypes   =   {};
    for k,v in pairs(ItemType) do
       if (ContainerInfo[cID].types[k]) then
@@ -574,7 +455,7 @@ local function ShowContainer(cID, itemTypes)
             foo.flags2  = gibi.Flags;
             foo.resid   = gibi.ResourceId;
             foo.slots   = gibi.Slots;
-            foo.type    = (gibi.Type == 3 and pRace == 7) and 7 or gibi.Type;
+            foo.type    = (gibi.Type == 3 and player.Race == 7) and 7 or gibi.Type;
             foo.desc    = gibi.Description;
             foo.races   = gibi.Races;
             foo.level   = gibi.Level;
@@ -592,7 +473,7 @@ local function ShowContainer(cID, itemTypes)
          if (filterID == 0 or myItemTypes[filterID][2] == items[i].type) then
             imgui.BeginGroup();
             if (not itemTextures:containskey(items[i].id)) then
-               local ires = GetItemById(items[i].id);
+               local ires = AshitaCore:GetResourceManager():GetItemById(items[i].id);
                itemTexturesPtr[items[i].id] = GetItemTexture(ires);
             end
             local image_size = 13;
@@ -604,7 +485,7 @@ local function ShowContainer(cID, itemTypes)
                end
             imgui.EndChild();
             imgui.SameLine();
-            local strout = items[i].name
+            local strout = string.format("%-20s", items[i].name);
             if (items[i].stack > 1) then
                imgui.Text(string.format("%2d", items[i].count));
                imgui.SameLine();
@@ -621,10 +502,10 @@ local function ShowContainer(cID, itemTypes)
                   imgui.PushStyleColor(ImGuiCol_ButtonHovered, {0.8, 0.8, 0.4, 0.5});
                   if (imgui.SmallButton('Use##' .. items[i].index)) then
                      if (items[i].targs == 1) then
-                        AshitaCore:GetChatManager():QueueCommand(-1, string.format('/item "%s" <me>', strout));
+                        AshitaCore:GetChatManager():QueueCommand(-1, string.format('/item "%s" <me>', items[i].name));
                      elseif (items[i].targs > 1 and
                              AshitaCore:GetMemoryManager():GetTarget():GetTargetName() ~= '') then
-                        AshitaCore:GetChatManager():QueueCommand(-1, string.format('/item "%s" <t>', strout));
+                        AshitaCore:GetChatManager():QueueCommand(-1, string.format('/item "%s" <t>', items[i].name));
                      end
                   end
                   imgui.PopStyleColor(2);
@@ -641,7 +522,11 @@ local function ShowContainer(cID, itemTypes)
                   if (cID ~= 1 and cID ~= 9 and jobCanUse and lvlCanUse) then
                      imgui.SameLine(imgui.GetWindowWidth() - 55);
                      if (imgui.SmallButton('Rem##' .. items[i].index)) then
-                        sendEquipItem(items[i].index, items[i].slots, cID, true);
+                         for k,v in pairs(EquipmentSlots) do
+                           if (items[i].slots == v) then
+                              AshitaCore:GetChatManager():QueueCommand(-1, string.format('/equip %s', k));
+                           end
+                        end
                      end
                   else
                      imgui.SameLine(imgui.GetWindowWidth() - 10);
@@ -656,7 +541,11 @@ local function ShowContainer(cID, itemTypes)
                      imgui.PushStyleColor(ImGuiCol_Button, {0.55, 1.0, 0.58, 0.33});
                      imgui.PushStyleColor(ImGuiCol_ButtonHovered, {0.55, 1.0, 0.58, 0.66});
                      if (imgui.SmallButton('Eqp##' .. items[i].index)) then
-                        sendEquipItem(items[i].index, items[i].slots, cID);
+                         for k,v in pairs(EquipmentSlots) do
+                           if (items[i].slots == v) then
+                              AshitaCore:GetChatManager():QueueCommand(-1, string.format('/equip %s "%s"', k, items[i].name));
+                           end
+                        end
                      end
                      imgui.PopStyleColor(2);
                   elseif (cID ~= 1 and cID ~= 9) then
@@ -685,36 +574,9 @@ local function ShowContainer(cID, itemTypes)
                   imgui.Text(' ');
                end
             end
-            if (cID ~= 1 and cID ~= 9) then
-               if (config.unlockedItems[items[i].id]) then
-                  imgui.SameLine(imgui.GetWindowWidth() - 78);
-                  imgui.PushStyleColor(ImGuiCol_Button, {1, 0.3, 0.2, 0});
-                  imgui.PushStyleColor(ImGuiCol_ButtonHovered, {1, 0.3, 0.2, 0.25});
-                  imgui.PushID('Drop' .. items[i].index .. ':' .. cID);
-                  if (imgui.ImageButton(imgDrpIcon, {13, 13}, {0, 0}, {1, 1}, 0)) then
-                     dropItem(items[i].index, items[i].count, cID);
-                  end
-                  imgui.PopID();
-                  imgui.PopStyleColor(2);
-                  imgui.EndGroup();
-                  ShowItemMenu(cID, items[i]);
-                  imgui.Separator();
-               else 
-                  imgui.EndGroup();
-                  ShowItemMenu(cID, items[i]);
-                  if (imgui.IsItemHovered()) then
-                     imgui.SameLine(imgui.GetWindowWidth() - 70);
-                     imgui.Image(imgLckIcon, {13, 13}, {0, 0}, {1, 1}, 0);
-                  else
-                     
-                  end
-                  imgui.Separator();
-               end
-            else
-               imgui.EndGroup();
-               ShowItemMenu(cID, items[i]);
-               imgui.Separator();
-            end
+            
+            imgui.EndGroup();
+            imgui.Separator();
          end
       end
    end
@@ -734,25 +596,6 @@ ashita.events.register('load', 'load_cb', function()
    end)
    
    ContainersInverted = table_invert(config.containerOrder);
-   
-   -- Set Pointers (MogHouse)
-   local pointer = ashita.memory.find('FFXiMain.dll', 0, '8B8C24040100008B90????????0BD18990????????8B15????????8B82', 0x00, 0x00);
-    if (pointer == 0) then
-        error('Failed to find required pointer. (2)');
-        return;
-    end
-    local offset = ashita.memory.read_uint32(pointer + 0x09);
-    if (offset == 0) then
-        error('Failed to read required offset. (2)');
-        return;
-    end
-    ZONE_FLAGS_OFFSET = offset;
-    pointer = ashita.memory.read_uint32(pointer + 0x17);
-    if (pointer == 0) then
-        error('Failed to read required pointer. (2)');
-        return;
-    end
-    ZONE_FLAGS_POINTER = pointer;
 end);
 
 ----------------------------------------------------------------------------------------------------
@@ -791,11 +634,11 @@ end);
 -- desc: Reload tetures if the device resets.
 ----------------------------------------------------------------------------------------------------
 ashita.events.register('d3d_reset', 'reset_cb', function()
+   -- Reload Textures from Files
    imgGilIcon, texGilIcon = LoadTextureFromFile('65535');
    imgInvIcon, texInvIcon = LoadTextureFromFile('sack');
-   imgLckIcon, texLckIcon = LoadTextureFromFile('locked');
-   imgDrpIcon, texDrpIcon = LoadTextureFromFile('x');
    
+   -- Clear Textures from Memory
    for id, tex in pairs(itemTextures) do
       if tex then tex:Release(); end
       itemTextures[id] = nil;
@@ -812,11 +655,13 @@ ashita.events.register('d3d_present', 'present_cb', function ()
    local player = GetPlayerEntity();
    if (player == nil) then return; end
    
+   -- Update Inventory
    if (ContainerInfo.Gil == nil) then
       SetContainerInfo();
       return;
    end
    
+   -- Draw UI
    if (inventory:GetContainerCountMax(0) ~= 0) then
       showMenu();
       

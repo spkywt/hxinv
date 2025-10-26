@@ -11,7 +11,7 @@ SkillTypes = T{ None=0, Hand_To_Hand=1, Dagger=2, Sword=3, Great_Sword=4, Axe=5,
 
 RaceMask = T{ All = 0, HUME_M = 2, HUME_F = 4, ELVAAN_M = 8, ELVAAN_F = 16, TARU_M = 32, TARU_F = 64, MITHRA = 128, GALKA = 256 };
 
-EquipmentSlots = T{ Main = 0, Sub = 1, Range = 2, Ammo = 3, Head = 4, Body = 5, Hands = 6, Legs = 7, Feet = 8, Neck = 9, Waist = 10, Ear1 = 11, Ear2 = 12, Ring1 = 13, Ring2 = 14, Back = 15 };
+EquipmentSlots = T{ Main = 3, Sub = 2, Range = 4, Ammo = 8, Head = 16, Body = 32, Hands = 64, Legs = 128, Feet = 256, Neck = 512, Waist = 1024, Ear1 = 2056, Ear2 = 4096, Ring1 = 8192, Ring2 = 16384, Back = 32768 };
 
 EquipmentSlotMask = T{ Main = 0, Sub = 2, Ranged = 4, Ammo = 8, Head = 16, Body = 32, Hands = 64, Legs = 128, Feet = 256, Neck = 512, Waist = 1024, Ear1 = 2056, Ear2 = 4096, Ring1 = 8192, Ring2 = 16384, Back = 32768 };
 
