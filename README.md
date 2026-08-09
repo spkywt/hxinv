@@ -19,6 +19,6 @@ Inventory Window w/ Tooltips and Buttons (equip/unequip equipment, use items)<br
 
 <h1>Completed Work</h1>
 <ul>
-   <li>1.0.0 &mdash; Required compatability updates or Ashita 4.3</li>
+   <li>1.0.1 &mdash; Required compatability updates or Ashita 4.3</li>
    <li>1.0.0 &mdash; 2025-10-22 (launch)</li>
 </ul>
