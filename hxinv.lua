@@ -26,7 +26,7 @@
 addon.author            =  'Espe (spkywt)';
 addon.name              =  'hxinv';
 addon.desc              =  'FFXI Inventory Viewer.';
-addon.version           =  '1.0.0';
+addon.version           =  '1.0.1';
 
 -- Ashita Libs
 require 'common'
@@ -185,7 +185,7 @@ local function ShowItemToolTip(item, r, g, b, a)
       imgui.BeginTooltip();
          local image_size = 64;
          imgui.PushStyleVar(ImGuiStyleVar_WindowPadding, {2, 2});
-         imgui.BeginChild('item-tt-icon', {image_size + 4, image_size + 4}, true);
+         imgui.BeginChild('item-tt-icon', {image_size + 4, image_size + 4}, ImGuiChildFlags_Borders);
             imgui.Image(itemTexturesPtr[item.id], {image_size, image_size});
          imgui.EndChild();
          imgui.PopStyleVar();
@@ -401,7 +401,6 @@ local function ShowContainer(cID, itemTypes)
    local cID = cID or 0;
    local Window_Flags = bit.bor(ImGuiWindowFlags_NoResize,
                                 ImGuiWindowFlags_NoCollapse,
-                                ImGuiWindowFlags_AlwaysUseWindowPadding,
                                 ImGuiWindowFlags_AlwaysVerticalScrollbar);
    
    local player = AshitaCore:GetMemoryManager():GetPlayer();
@@ -477,7 +476,7 @@ local function ShowContainer(cID, itemTypes)
                itemTexturesPtr[items[i].id] = GetItemTexture(ires);
             end
             local image_size = 13;
-            imgui.BeginChild('item-icon##' .. cID .. ':' .. items[i].index, {image_size, image_size}, false);
+            imgui.BeginChild('item-icon##' .. cID .. ':' .. items[i].index, {image_size, image_size}, 0);
                if (itemTextures[items[i].id]) then
                   imgui.Image(itemTexturesPtr[items[i].id], {image_size, image_size});
                else
